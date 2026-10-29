@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Schedule Pad</title>
+<style>
+  :root {
+    --navy: #0b1f47;
+    --navy-2: #12295a;
+    --ink: #1f2937;
+    --ink-2: #4b5563;
+    --muted: #8a94a6;
+    --line: #e3e7ee;
+    --line-2: #eef1f5;
+    --bg: #f1f3f7;
+    --card: #ffffff;
+    --blue: #1a6fe0;
+    --red: #e02d2d;
+    --sand: #f6e3c4;
+    --label-w: 290px;
+    --forecast: #4a9fd8;   /* validated pair: CVD ΔE 13.8, normal ΔE 19.2 */
+    --scheduled: #7d55b8;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    font: 13px/1.35 "Segoe UI", system-ui, -apple-system, sans-serif;
+    color: var(--ink);
+    background: var(--bg);
+  }
+  button { font: inherit; color: inherit; cursor: pointer; }
+
+  /* ---------- App chrome ---------- */
+  .ico { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+  .caret { width: 9px; height: 6px; fill: #3b82f6; margin-left: 2px; }
+
+  .topbar {
+    height: 52px; background: var(--navy); color: #fff;
+    display: flex; align-items: center; gap: 30px; padding: 0 18px 0 0;
+  }
+  .brand { width: 52px; height: 52px; display: grid; place-items: center; flex-shrink: 0; }
+  .brand span { width: 36px; height: 36px; border-radius: 9px; background: linear-gradient(160deg, #5aa2ff, #2f6fe4); display: grid; place-items: center; box-shadow: inset 0 0 0 1px rgba(255,255,255,.18); }
+  .brand .ico { width: 22px; height: 22px; stroke: #fff; stroke-width: 1.6; }
+  .topnav { display: flex; gap: 30px; align-items: center; font-size: 13.5px; }
+  .topnav a { color: #fff; text-decoration: none; display: flex; gap: 9px; align-items: center; }
+  .topnav a .ico { width: 21px; height: 21px; }
+  .clock { margin-left: auto; margin-right: auto; display: flex; gap: 14px; align-items: center; font-weight: 700; font-size: 13px; letter-spacing: .01em; }
+  .clock .wx { width: 30px; height: 26px; stroke: #4c8dff; }
+  .clock .bar { width: 2px; height: 22px; background: #fff; }
+  .clock b { color: #4c8dff; font-weight: 500; font-size: 15px; display: inline-flex; align-items: flex-start; gap: 0; margin-right: -6px; }
+  .clock b sup { color: #fff; font-size: 10px; font-weight: 700; margin-left: 2px; line-height: 1; }
+  .bell { position: relative; width: 36px; height: 36px; border-radius: 50%; background: #26334f; display: grid; place-items: center; border: 0; padding: 0; }
+  .bell svg { width: 16px; height: 18px; fill: #fff; }
+  .bell em { position: absolute; top: -5px; right: -4px; min-width: 17px; height: 17px; border-radius: 9px; background: #2f7cf6; color: #fff; font-size: 10.5px; font-style: normal; font-weight: 700; display: grid; place-items: center; border: 2px solid var(--navy); }
+  .corp { background: #fff; color: #1b2433; border: 0; border-radius: 22px; padding: 0 16px; height: 38px; font-weight: 700; font-size: 14px; display: inline-flex; align-items: center; gap: 9px; }
+  .corp .ico { stroke: #2f6fe4; width: 19px; height: 19px; }
+  .corp .chev { width: 12px; height: 12px; stroke: #1b2433; margin-left: 4px; }
+  .avatar-top { width: 38px; height: 38px; border-radius: 50%; overflow: hidden; border: 2px solid #fff; background: #dbe8f8; flex-shrink: 0; }
+  .avatar-top svg { width: 100%; height: 100%; display: block; }
+
+  .shell { display: flex; background: linear-gradient(90deg, var(--navy) 52px, transparent 52px); }
+  .sidebar {
+    width: 52px; background: var(--navy); flex-shrink: 0;
+    position: sticky; top: 0; align-self: flex-start;
+    height: calc(100vh - 52px); min-height: 560px; padding-top: 6px;
+    display: flex; flex-direction: column; align-items: stretch; gap: 2px;
+  }
+  .sidebar a { height: 47px; display: grid; place-items: center; color: #d6deec; position: relative; }
+  .sidebar a .ico { width: 23px; height: 23px; stroke-width: 1.4; }
+  .sidebar a:hover { color: #fff; background: rgba(255,255,255,.05); }
+  .sidebar a.on { background: #1f3c78; color: #fff; }
+  .sidebar .help { margin-top: auto; margin-bottom: 14px; height: auto; }
+  .sidebar .help span { width: 38px; height: 38px; border-radius: 50%; background: #2f7cf6; border: 2px solid #fff; display: grid; place-items: center; }
+  .sidebar .help .ico { width: 22px; height: 22px; stroke: #fff; stroke-width: 1.6; }
+
+  main.page { flex: 1; padding: 10px 10px 24px; min-width: 0; }
+  .card { background: var(--card); border-radius: 6px; padding: 10px 10px 14px; box-shadow: 0 1px 2px rgba(15,23,42,.05); }
+
+  /* ---------- Toolbar ---------- */
+  .toolbar { display: flex; align-items: center; gap: 10px; padding: 0 0 10px; }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 18px; overflow: hidden; background: #fff; }
+  .seg button { border: 0; background: none; padding: 6px 13px; border-right: 1px solid var(--line); }
+  .seg button:last-child { border-right: 0; }
+  .seg button.on { background: #eef3fb; color: var(--blue); font-weight: 600; }
+  .datebtn { min-width: 140px; }
+  .pill { border: 1px solid var(--line); background: #fff; border-radius: 18px; padding: 6px 14px; }
+  .filters { margin: 0 auto; }
+  .btn-primary { background: var(--blue); color: #fff; border: 0; border-radius: 16px; padding: 7px 14px; font-weight: 600; }
+  .btn-muted { background: #e9ecf1; color: #8a94a6; border: 0; border-radius: 16px; padding: 7px 16px; }
+
+  /* ---------- Pad (shared column template) ---------- */
+  .pad { position: relative; border: 1px solid var(--line); border-radius: 4px; }
+  .row { display: grid; grid-template-columns: var(--label-w) 1fr; }
+  .hours { display: grid; grid-template-columns: repeat(24, 1fr); }
+  .hours > div { text-align: center; border-left: 1px solid var(--line); }
+
+  .head { background: #f7f8fa; border-bottom: 1px solid var(--line); font-weight: 600; }
+  .head .label { display: flex; justify-content: space-between; align-items: center; padding: 8px 18px 8px 0; }
+  .head .label span { flex: 1; text-align: center; }
+  .head .hours > div { padding: 8px 0; font-size: 12px; }
+
+  .rows { max-height: calc(100vh - 290px); min-height: 380px; overflow-y: auto; scrollbar-gutter: stable; }
+  .head, .summary, .breakdown { padding-right: var(--gutter, 0px); }
+  .emp { border-bottom: 1px solid var(--line-2); min-height: 44px; }
+  .emp .label { display: flex; align-items: center; gap: 10px; padding: 5px 10px; border-right: 1px solid var(--line); position: relative; }
+  .av { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; font-weight: 700; color: #fff; flex-shrink: 0; position: relative; }
+  .av .m { position: absolute; right: -3px; bottom: -3px; width: 13px; height: 13px; border-radius: 50%; background: #2bb673; border: 2px solid #fff; font-size: 7px; display: grid; place-items: center; }
+  .emp .name { font-weight: 600; font-size: 12.5px; }
+  .emp .meta { color: var(--ink-2); font-size: 11.5px; }
+  .emp .meta .ot { color: var(--red); }
+  .warn { position: absolute; right: 12px; top: 10px; width: 0; height: 0; border-left: 7px solid transparent; border-right: 7px solid transparent; border-bottom: 12px solid var(--red); }
+  .warn::after { content: "!"; position: absolute; left: -2px; top: 1px; color: #fff; font-size: 9px; font-weight: 800; }
+
+  .lane { position: relative; cursor: copy; }
+  .lane::before { /* faint hour lines */
+    content: ""; position: absolute; inset: 0;
+    background: repeating-linear-gradient(90deg, transparent 0 calc(100% / 24 - 1px), var(--line-2) calc(100% / 24 - 1px) calc(100% / 24));
+    pointer-events: none;
+  }
+  .shift {
+    position: absolute; top: 5px; bottom: 5px; border-radius: 18px; color: #fff;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    font-size: 11.5px; font-weight: 500; cursor: grab; user-select: none; touch-action: none;
+    box-shadow: 0 1px 2px rgba(0,0,0,.08); white-space: nowrap; overflow: hidden;
+  }
+  .shift.dragging { cursor: grabbing; box-shadow: 0 6px 16px rgba(15,23,42,.25); z-index: 2; }
+  .shift .tag { background: rgba(0,0,0,.22); padding: 1px 6px; border-radius: 2px; font-size: 10.5px; font-weight: 600; }
+  .shift .grip { position: absolute; top: 0; bottom: 0; width: 9px; cursor: ew-resize; }
+  .shift .grip.l { left: 0; } .shift .grip.r { right: 0; }
+  .shift .del { position: absolute; right: 12px; width: 16px; height: 16px; border-radius: 50%; border: 0; background: rgba(0,0,0,.25); color: #fff; font-size: 11px; line-height: 16px; padding: 0; opacity: 0; }
+  .shift:hover .del { opacity: 1; }
+
+  /* ---------- Summary row (footer) ---------- */
+  .summary { border-top: 1px solid var(--line); background: #fff; }
+  .summary .label { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-right: 1px solid var(--line); }
+  .toggle { border: 0; background: none; padding: 2px 4px; color: var(--blue); font-size: 14px; line-height: 1; }
+  .toggle svg { transition: transform .2s; }
+  .pad.expanded .toggle svg { transform: rotate(180deg); }
+  .sumtxt { color: var(--red); font-weight: 600; font-size: 12.5px; }
+  .sumtxt.ok { color: #15803d; }
+  .graph-btn {
+    margin-left: 22px; border: 1px solid transparent; background: none; border-radius: 6px; padding: 3px 5px;
+    display: grid; place-items: center; position: relative;
+  }
+  .graph-btn:hover { background: #fdecec; border-color: #f5c2c2; }
+  .graph-btn.on { background: #fdecec; border-color: var(--red); }
+  .graph-btn .hint { position: absolute; left: 34px; top: 50%; transform: translateY(-50%); background: var(--ink); color: #fff; font-size: 11px; padding: 3px 7px; border-radius: 4px; white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity .15s; }
+  .graph-btn:hover .hint { opacity: 1; }
+  .pad.charting .graph-btn .hint { opacity: 0; }
+  .summary .hours > div { padding: 7px 0; font-size: 12px; }
+
+  /* ---------- Hourly breakdown ---------- */
+  .breakdown { display: none; border-top: 1px solid var(--line); background: #fff; }
+  .pad.expanded .breakdown { display: block; }
+  .bd-head .hours > div, .bd-row .hours > div { padding: 6px 0; font-size: 12px; }
+  .bd-head { background: #f7f8fa; font-weight: 600; border-bottom: 1px solid var(--line); }
+  .bd-row { border-bottom: 1px solid var(--line-2); }
+  .bd-row .label { display: flex; justify-content: space-between; padding: 6px 4px 6px 6px; font-style: italic; font-size: 12px; border-right: 1px solid var(--line); }
+  .bd-row .label em { color: var(--ink-2); }
+  .bd-row .neg { color: var(--red); font-weight: 600; }
+  .bd-row.sales .hours > div { background: var(--sand); }
+
+  /* ---------- Graph popup ---------- */
+  .scrim { position: fixed; inset: 0; background: rgba(11, 22, 45, .45); backdrop-filter: grayscale(.35) blur(.5px); z-index: 60; opacity: 0; pointer-events: none; transition: opacity .18s; }
+  .scrim.on { opacity: 1; pointer-events: auto; }
+  .pad.charting .summary, .pad.charting .breakdown { position: relative; z-index: 61; }
+  .pad.charting .rows { pointer-events: none; }
+
+  .popup {
+    position: absolute; left: 0; right: 0; z-index: 62;
+    background: #fff; border-radius: 10px; border: 1px solid #d9dfe9;
+    box-shadow: 0 18px 40px rgba(11,22,45,.28), 0 2px 6px rgba(11,22,45,.12);
+    opacity: 0; transform: translateY(10px); pointer-events: none;
+    transition: opacity .18s, transform .18s;
+  }
+  .popup.on { opacity: 1; transform: none; pointer-events: auto; }
+  .popup::after { /* notch pointing at the graph icon */
+    content: ""; position: absolute; bottom: -8px; left: var(--notch, 140px);
+    width: 14px; height: 14px; background: #fff; transform: rotate(45deg);
+    border-right: 1px solid #d9dfe9; border-bottom: 1px solid #d9dfe9;
+  }
+  .pp-head { display: flex; align-items: center; gap: 14px; padding: 12px 16px 6px; }
+  .pp-head h2 { margin: 0; font-size: 15px; }
+  .pp-head .date { color: var(--muted); font-size: 12.5px; }
+  .legend { margin-left: auto; display: flex; gap: 18px; color: var(--ink-2); font-size: 12.5px; }
+  .legend span { display: inline-flex; align-items: center; gap: 7px; }
+  .legend i { width: 14px; height: 10px; border-radius: 2px; display: inline-block; }
+  .pp-close { border: 0; background: #f1f3f7; width: 28px; height: 28px; border-radius: 50%; font-size: 16px; line-height: 1; color: var(--ink-2); }
+  .pp-close:hover { background: #e3e7ee; }
+  .pp-body { position: relative; height: 262px; }
+  .pp-body svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+  .stats { position: absolute; left: 16px; top: 8px; display: grid; gap: 8px; }
+  .stat { background: #f7f8fb; border: 1px solid var(--line-2); border-radius: 8px; padding: 7px 12px; }
+  .stat small { display: block; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .04em; }
+  .stat b { font-size: 17px; font-weight: 650; display: inline-flex; align-items: center; gap: 7px; }
+  .stat b i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+  .stat .neg { color: var(--red); } .stat .pos { color: #15803d; }
+
+  .axis text { font-size: 11px; fill: var(--muted); }
+  .axis line, .gridline { stroke: #e8ebf0; }
+  .baseline { stroke: #b8c0cc; }
+  .col-hit { fill: transparent; cursor: default; }
+  .col-hit:hover, .col-hit.hl { fill: rgba(125,85,184,.07); }
+  .bar { transition: y .35s ease, height .35s ease; }
+  .vlabel { font-size: 10.5px; fill: var(--ink-2); font-weight: 600; }
+
+  .tip { position: absolute; z-index: 70; background: #fff; border: 1px solid #d9dfe9; border-radius: 8px; padding: 8px 11px; box-shadow: 0 6px 18px rgba(11,22,45,.18); font-size: 12px; pointer-events: none; min-width: 150px; display: none; }
+  .tip h4 { margin: 0 0 5px; font-size: 12.5px; }
+  .tip div { display: flex; justify-content: space-between; gap: 14px; }
+  .tip div span { display: inline-flex; align-items: center; gap: 6px; color: var(--ink-2); }
+  .tip i { width: 9px; height: 9px; border-radius: 2px; display: inline-block; }
+  .tip .var { border-top: 1px solid var(--line-2); margin-top: 4px; padding-top: 4px; }
+
+  .toast { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); background: var(--ink); color: #fff; padding: 9px 16px; border-radius: 8px; font-size: 12.5px; z-index: 80; opacity: 0; transition: opacity .2s; pointer-events: none; }
+  .toast.on { opacity: 1; }
+</style>
+</head>
+<body>
+
+<!-- Icon set (outline, 24px grid) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-apps" viewBox="0 0 24 24"><circle cx="7" cy="7" r="3.2"/><circle cx="17" cy="7" r="3.2"/><circle cx="7" cy="17" r="3.2"/><rect x="13.8" y="13.8" width="6.4" height="6.4" rx="1.2"/></symbol>
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="M3.5 11 12 4l8.5 7"/><path d="M5.5 9.5V20h4.5v-5.5h4V20h4.5V9.5"/></symbol>
+  <symbol id="i-cal" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/><path d="M7 13h2M11 13h2M15 13h2M7 16.5h2M11 16.5h2"/></symbol>
+  <symbol id="i-cal-clock" viewBox="0 0 24 24"><path d="M11 20.5H5.5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2v4"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/><path d="M7 13h1.5M10.5 13H12M7 16.5h1.5"/><circle cx="17" cy="17" r="4"/><path d="M17 15.2V17l1.2 1"/></symbol>
+  <symbol id="i-pin-user" viewBox="0 0 24 24"><path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0C18.5 15.4 12 21 12 21z"/><circle cx="12" cy="8.6" r="1.9"/><path d="M8.9 13.6a3.6 3.6 0 0 1 6.2 0"/></symbol>
+  <symbol id="i-clock-doc" viewBox="0 0 24 24"><path d="M12.5 20.4A8.5 8.5 0 1 1 20.4 12"/><path d="M12 7v5l3 2"/><rect x="15" y="15" width="6" height="6" rx="1"/><path d="M16.8 17.2h2.4M16.8 19h1.6"/></symbol>
+  <symbol id="i-clock-plus" viewBox="0 0 24 24"><path d="M12.6 20.4A8.5 8.5 0 1 1 20.4 12.6"/><path d="M12 7v5h3.5"/><circle cx="18" cy="18" r="3.3"/><path d="M18 16.6v2.8M16.6 18h2.8"/></symbol>
+  <symbol id="i-org" viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"/><path d="M9 10.5a3 3 0 0 1 6 0"/><circle cx="5" cy="15" r="2"/><path d="M2 20.5a3 3 0 0 1 6 0"/><circle cx="19" cy="15" r="2"/><path d="M16 20.5a3 3 0 0 1 6 0"/><circle cx="12" cy="15" r="2"/><path d="M9 20.5a3 3 0 0 1 6 0"/><path d="M5 12.5V12h14v.5M12 11v1.5" stroke-dasharray="1.5 1.5"/></symbol>
+  <symbol id="i-building" viewBox="0 0 24 24"><path d="M3.5 21V9l6-4v16M9.5 21h11V11l-5-3"/><path d="M6 11h1M6 14h1M6 17h1"/><path d="M12.5 18v-3M15 18v-5M17.5 18v-2"/><path d="M12 9.5l3-3 2 1.5 3-3"/></symbol>
+  <symbol id="i-docs" viewBox="0 0 24 24"><path d="M8 3.5h8.5L20 7v11.5a1.5 1.5 0 0 1-1.5 1.5H8a1.5 1.5 0 0 1-1.5-1.5V5A1.5 1.5 0 0 1 8 3.5z"/><path d="M16.5 3.5V7H20"/><path d="M6.5 7H5a1.5 1.5 0 0 0-1.5 1.5v12A1.5 1.5 0 0 0 5 22h10"/><path d="M9.5 10.5h7M9.5 13.5h7M9.5 16.5h4.5"/></symbol>
+  <symbol id="i-report" viewBox="0 0 24 24"><path d="M14 20.5H5.5a1.5 1.5 0 0 1-1.5-1.5V4.5A1.5 1.5 0 0 1 5.5 3h11A1.5 1.5 0 0 1 18 4.5V11"/><path d="M7.5 7h7M7.5 10.5h7M7.5 14h3.5"/><circle cx="18" cy="15" r="2"/><path d="M14.5 21a3.5 3.5 0 0 1 7 0"/></symbol>
+  <symbol id="i-team" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 19.5a6 6 0 0 1 12 0"/><circle cx="16.5" cy="8.5" r="2.5"/><path d="M15.5 13.6A5 5 0 0 1 21.5 18.5"/></symbol>
+  <symbol id="i-weather" viewBox="0 0 32 26"><path d="M9 22.5h13.5a5 5 0 0 0 .6-10A7 7 0 0 0 9.8 14 4.3 4.3 0 0 0 9 22.5z"/><path d="M20 6.2a5 5 0 0 1 8.4 5.4"/><path d="M24.5 1v1.8M30.2 7.8H31.5M29.2 3.2l-1.1 1.1"/></symbol>
+  <symbol id="i-corp" viewBox="0 0 24 24"><path d="M3.5 20.5h17M5 20.5V8.5l6-3v15M11 20.5V3.5l8 3v14"/><path d="M14 9.5h2M14 12.5h2M14 15.5h2M7.5 11h1M7.5 14h1"/></symbol>
+  <symbol id="i-chev" viewBox="0 0 12 12"><path d="M2.5 4.5 6 8l3.5-3.5"/></symbol>
+  <symbol id="i-support" viewBox="0 0 24 24"><path d="M5 13v-1.5a7 7 0 0 1 14 0V13"/><rect x="3.5" y="12.5" width="3.5" height="5.5" rx="1.5"/><rect x="17" y="12.5" width="3.5" height="5.5" rx="1.5"/><path d="M19 18c0 1.7-1.6 2.5-4 2.5h-1.5"/><circle cx="12" cy="13" r="2.4"/><path d="M12 9.6v1M12 15.4v1M8.6 13h1M14.4 13h1"/></symbol>
+</svg>
+
+<header class="topbar">
+  <div class="brand"><span><svg class="ico"><use href="#i-cal-clock"/></svg></span></div>
+  <nav class="topnav">
+    <a href="#"><svg class="ico"><use href="#i-apps"/></svg>My Apps<svg class="caret" viewBox="0 0 10 6"><path d="M0 0h10L5 6z"/></svg></a>
+    <a href="#"><svg class="ico"><use href="#i-home"/></svg>Dashboard</a>
+    <a href="#"><svg class="ico"><use href="#i-cal"/></svg>Schedule</a>
+    <a href="#"><svg class="ico"><use href="#i-pin-user"/></svg>Altametrics<svg class="caret" viewBox="0 0 10 6"><path d="M0 0h10L5 6z"/></svg></a>
+  </nav>
+  <div class="clock">
+    <svg class="ico wx"><use href="#i-weather"/></svg>
+    <span class="bar"></span>
+    <b>04 : 13<sup>A</sup></b>
+    <span>AMERICA/LOS ANGELES</span>
+  </div>
+  <button class="corp"><svg class="ico"><use href="#i-corp"/></svg>Corporate<svg class="ico chev"><use href="#i-chev"/></svg></button>
+  <span class="avatar-top" aria-label="Profile">
+    <svg viewBox="0 0 40 40"><rect width="40" height="40" fill="#dbe8f8"/><path d="M6 40c1-8 6.5-11 14-11s13 3 14 11z" fill="#3f6fb5"/><path d="M17 29l3 5 3-5z" fill="#fff"/><path d="M19.2 30.5h1.6l.6 5h-2.8z" fill="#c0392b"/><circle cx="20" cy="18.5" r="7" fill="#f3cfae"/><path d="M12.8 17.5c0-6 3.6-8.5 7.6-8.5 4.4 0 7 3 6.8 8.2-1.6-2.4-4.4-3.4-8-3.6-2 .1-4.6 1.4-6.4 3.9z" fill="#2f2a2a"/></svg>
+  </span>
+</header>
+
+<div class="shell">
+  <nav class="sidebar" aria-label="Main menu">
+    <a href="#" title="Home"><svg class="ico"><use href="#i-home"/></svg></a>
+    <a href="#" class="on" title="Schedule" aria-current="page"><svg class="ico"><use href="#i-cal-clock"/></svg></a>
+    <a href="#" title="Store"><svg class="ico"><use href="#i-home"/></svg></a>
+    <a href="#" title="Time &amp; attendance"><svg class="ico"><use href="#i-clock-doc"/></svg></a>
+    <a href="#" title="Time clock"><svg class="ico"><use href="#i-clock-plus"/></svg></a>
+    <a href="#" title="Organization"><svg class="ico"><use href="#i-org"/></svg></a>
+    <a href="#" title="Locations &amp; reports"><svg class="ico"><use href="#i-building"/></svg></a>
+    <a href="#" title="Documents"><svg class="ico"><use href="#i-docs"/></svg></a>
+    <a href="#" title="Employee reports"><svg class="ico"><use href="#i-report"/></svg></a>
+    <a href="#" title="Team"><svg class="ico"><use href="#i-team"/></svg></a>
+    <a href="#" class="help" title="Support"><span><svg class="ico"><use href="#i-support"/></svg></span></a>
+  </nav>
+
+  <main class="page">
+    <section class="card">
+      <div class="toolbar">
+        <div class="seg">
+          <button id="prevDay" aria-label="Previous day">‹</button>
+          <button class="datebtn" id="dateLabel">31/10/2026</button>
+          <button id="nextDay" aria-label="Next day">›</button>
+        </div>
+        <div class="seg"><button class="on">Day</button><button data-soon>Week</button><button data-soon>Month</button></div>
+        <button class="pill filters" data-soon>Filters ☰</button>
+        <button class="btn-primary" data-soon>Audit Trail</button>
+        <button class="btn-primary" data-soon>＋ Add Employee</button>
+        <button class="btn-muted" data-soon>✓ Publish</button>
+      </div>
+
+      <div class="pad" id="pad">
+        <div class="row head" id="headRow">
+          <div class="label"><span>Employees</span>🔍</div>
+          <div class="hours" id="headHours"></div>
+        </div>
+        <div class="rows" id="rows"></div>
+
+        <div class="row summary" id="summary">
+          <div class="label">
+            <button class="toggle" id="toggleBd" aria-label="Show hourly breakdown">
+              <svg width="12" height="12" viewBox="0 0 12 12"><path d="M2 8l4-4 4 4" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+            </button>
+            <span class="sumtxt" id="sumTxt"></span>
+            <button class="graph-btn" id="graphBtn" aria-label="Show scheduled vs forecasted hours graph" aria-expanded="false" aria-controls="popup">
+              <svg width="20" height="18" viewBox="0 0 20 18"><rect x="1" y="9" width="3.4" height="8" fill="#e02d2d"/><rect x="6" y="5" width="3.4" height="12" fill="#e02d2d"/><rect x="11" y="8" width="3.4" height="9" fill="#e02d2d"/><path d="M1 7l5-4 5 3 7-5" fill="none" stroke="#e02d2d" stroke-width="1.8"/></svg>
+              <span class="hint">Scheduled vs Forecasted hours</span>
+            </button>
+          </div>
+          <div class="hours" id="sumHours"></div>
+        </div>
+
+        <div class="breakdown" id="breakdown"></div>
+
+        <div class="popup" id="popup" role="dialog" aria-modal="true" aria-labelledby="ppTitle">
+          <div class="pp-head">
+            <h2 id="ppTitle">Scheduled vs Forecasted Hours</h2>
+            <span class="date" id="ppDate"></span>
+            <div class="legend">
+              <span><i style="background:var(--scheduled)"></i>Scheduled hours</span>
+              <span><i style="background:var(--forecast)"></i>Forecasted hours</span>
+            </div>
+            <button class="pp-close" id="ppClose" aria-label="Close graph">×</button>
+          </div>
+          <div class="pp-body" id="ppBody">
+            <div class="stats" id="stats"></div>
+            <svg id="chart" aria-label="Hourly scheduled versus forecasted hours"></svg>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div class="scrim" id="scrim"></div>
+<div class="tip" id="tip"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ===================== Data ===================== */
+const HOURS = Array.from({ length: 24 }, (_, h) => h);
+const hourLabel = h => (h % 12 || 12) + (h < 12 ? "A" : "P");
+
+const ROLE = {
+  NP:      { color: "#0a66c8", tag: "NP" },
+  CASHIER: { color: "#4fcf7a", tag: "CASHIER" },
+  COOK:    { color: "#c94a5b", tag: "COOK" },
+  SUP:     { color: "#d465a6", tag: "SHIFT SUPERVISOR" },
+  GEN:     { color: "#45aeb0", tag: "" },
+  TRAIN:   { color: "#f25a3a", tag: "" }
+};
+
+// fixed = salaried/fixed staff, mgr = counts toward management coverage
+const EMPLOYEES = [
+  { id: 1,  name: "Allen J",   ini: "AJ", bg: "#6b8e23", rate: 16, fixed: false, mgr: false },
+  { id: 2,  name: "Amanda",    ini: "AM", bg: "#5b4636", rate: 17, fixed: false, mgr: false },
+  { id: 3,  name: "Amelia",    ini: "AE", bg: "#a0522d", rate: 16, fixed: true,  mgr: false },
+  { id: 4,  name: "Andriane",  ini: "AD", bg: "#8b5a2b", rate: 18, fixed: false, mgr: false },
+  { id: 5,  name: "Arther",    ini: "AR", bg: "#2bb5a0", rate: 15, fixed: false, mgr: false },
+  { id: 6,  name: "Brett",     ini: "BR", bg: "#4a78b5", rate: 16, fixed: true,  mgr: true  },
+  { id: 7,  name: "Bryan",     ini: "BY", bg: "#3d4b63", rate: 17, fixed: true,  mgr: false },
+  { id: 8,  name: "Cary",      ini: "CA", bg: "#7a8b1f", rate: 18, fixed: false, mgr: false },
+  { id: 9,  name: "Harshey L", ini: "HL", bg: "#4b5563", rate: 15, fixed: false, mgr: false },
+  { id: 10, name: "James",     ini: "JA", bg: "#5b7fb0", rate: 16, fixed: false, mgr: true  },
+  { id: 11, name: "Noah",      ini: "NH", bg: "#8a7f6e", rate: 19, fixed: true,  mgr: true, m: true },
+  { id: 12, name: "Nomark",    ini: "NO", bg: "#e02d2d", rate: 21, fixed: false, mgr: false },
+  { id: 13, name: "Oliver",    ini: "OL", bg: "#b8730a", rate: 17, fixed: false, mgr: false },
+  { id: 14, name: "Roman",     ini: "RO", bg: "#2f2f3a", rate: 15, fixed: false, mgr: false },
+  { id: 15, name: "Smith",     ini: "SM", bg: "#334155", rate: 22, fixed: true,  mgr: true, m: true }
+];
+
+// Base template for 31/10/2026 — start/end in hours (8.5 = 8:30A)
+const BASE = [
+  { emp: 1,  s: 1,  e: 4,  role: "GEN" },
+  { emp: 2,  s: 2,  e: 7,  role: "NP" },
+  { emp: 3,  s: 8,  e: 16, role: "CASHIER" },
+  { emp: 4,  s: 8,  e: 16, role: "NP" },
+  { emp: 6,  s: 11, e: 18, role: "CASHIER" },
+  { emp: 7,  s: 8,  e: 17, role: "CASHIER" },
+  { emp: 8,  s: 3,  e: 9,  role: "COOK" },
+  { emp: 10, s: 10, e: 14, role: "GEN" },
+  { emp: 11, s: 8,  e: 17, role: "CASHIER" },
+  { emp: 12, s: 15, e: 23, role: "SUP" },
+  { emp: 13, s: 8,  e: 16, role: "NP" },
+  { emp: 14, s: 14, e: 18, role: "TRAIN" },
+  { emp: 15, s: 12, e: 20, role: "SUP" }
+];
+
+const BASE_FORECAST = [0,0,0,0,0,0,0,0,4,4,4,4,4,4,4,4,4,4,4,4,4,0,0,0];
+const BASE_SALES    = [0,0,0,0,0,0,0,0,348.76,348.76,348.76,348.76,348.76,348.76,348.76,348.76,348.76,348.76,348.76,348.76,261.57,0,0,0];
+
+// Each day gets its own deterministic variation so date navigation shows the graph tracking the data
+function seeded(n) { let x = n * 9301 + 49297; return () => (x = (x * 233280 + 49297) % 1e9) / 1e9; }
+const days = new Map();
+function dayData(date) {
+  const key = date.toISOString().slice(0, 10);
+  if (days.has(key)) return days.get(key);
+  const off = Math.round((date - new Date(2026, 9, 31)) / 864e5);
+  let data;
+  if (off === 0) {
+    data = { shifts: BASE.map((b, i) => ({ id: i + 1, ...b })), forecast: [...BASE_FORECAST], sales: [...BASE_SALES] };
+  } else {
+    const r = seeded(Math.abs(off) + 7);
+    const weekend = [0, 6].includes(date.getDay());
+    const shifts = [];
+    BASE.forEach((b, i) => {
+      if (r() < 0.18) return;                                // day off
+      const shift = Math.round((r() * 4 - 2)) ;              // move ±2h
+      const s = Math.min(Math.max(b.s + shift, 0), 20);
+      const len = Math.max(3, b.e - b.s + Math.round(r() * 2 - 1));
+      shifts.push({ id: i + 1, emp: b.emp, role: b.role, s, e: Math.min(24, s + len) });
+    });
+    const bump = weekend ? 1 : 0;
+    const forecast = BASE_FORECAST.map((f, h) => f ? f + bump + (h >= 11 && h <= 13 ? 1 : 0) - (r() < .2 ? 1 : 0) : 0);
+    const sales = BASE_SALES.map(v => v ? +(v * (0.8 + r() * 0.5) * (weekend ? 1.15 : 1)).toFixed(2) : 0);
+    data = { shifts, forecast, sales };
+  }
+  days.set(key, data);
+  return data;
+}
+
+/* ===================== State ===================== */
+let current = new Date(2026, 9, 31);
+let state = dayData(current);
+let nextId = 100;
+const empById = Object.fromEntries(EMPLOYEES.map(e => [e.id, e]));
+
+/* ===================== Calculations ===================== */
+const overlap = (s, e, h) => Math.max(0, Math.min(e, h + 1) - Math.max(s, h));
+const fmtNum = (v, d = 2) => Number.isInteger(v) && d === 0 ? String(v) : v.toFixed(d);
+const fmtCell = v => (Math.round(v * 100) / 100).toString();
+
+function compute() {
+  const z = () => HOURS.map(() => 0);
+  const total = z(), fixed = z(), mgmt = z(), cost = z();
+  state.shifts.forEach(sh => {
+    const emp = empById[sh.emp];
+    HOURS.forEach(h => {
+      const o = overlap(sh.s, sh.e, h);
+      if (!o) return;
+      total[h] += o; cost[h] += o * emp.rate;
+      if (emp.fixed) fixed[h] += o;
+      if (emp.mgr) mgmt[h] += o;
+    });
+  });
+  const variable = HOURS.map(h => total[h] - fixed[h]);
+  const variance = HOURS.map(h => variable[h] - state.forecast[h]);
+  const trans = state.sales.map(v => Math.round(v / 11.5));
+  const splh = HOURS.map(h => total[h] ? state.sales[h] / total[h] : 0);
+  const tplh = HOURS.map(h => total[h] ? trans[h] / total[h] : 0);
+  const labour = HOURS.map(h => state.sales[h] ? cost[h] / state.sales[h] * 100 : 0);
+  const sum = a => a.reduce((x, y) => x + y, 0);
+  const T = {
+    total: sum(total), fixed: sum(fixed), variable: sum(variable), forecast: sum(state.forecast),
+    variance: sum(variance), mgmt: sum(mgmt), sales: sum(state.sales), trans: sum(trans), cost: sum(cost)
+  };
+  T.splh = T.total ? T.sales / T.total : 0;
+  T.tplh = T.total ? T.trans / T.total : 0;
+  T.labour = T.sales ? T.cost / T.sales * 100 : 0;
+  return { total, fixed, variable, variance, mgmt, splh, tplh, labour, trans, T };
+}
+
+/* ===================== Rendering ===================== */
+const $ = id => document.getElementById(id);
+const fmtTime = h => {
+  const hh = Math.floor(h) % 24, mm = Math.round((h - Math.floor(h)) * 60);
+  return `${hh % 12 || 12}:${String(mm).padStart(2, "0")}${hh < 12 ? "A" : "P"}`;
+};
+
+$("headHours").innerHTML = HOURS.map(h => `<div>${hourLabel(h)}</div>`).join("");
+
+function renderRows() {
+  $("rows").innerHTML = EMPLOYEES.map(emp => {
+    const shifts = state.shifts.filter(s => s.emp === emp.id);
+    const hrs = shifts.reduce((a, s) => a + (s.e - s.s), 0);
+    const ot = Math.max(0, hrs - 8);
+    return `
+      <div class="row emp" data-emp="${emp.id}">
+        <div class="label">
+          <span class="av" style="background:${emp.bg}">${emp.ini}${emp.m ? '<span class="m">M</span>' : ""}</span>
+          <div>
+            <div class="name">${emp.name}</div>
+            <div class="meta">◷ Hrs ${hrs.toFixed(1)} &nbsp;|&nbsp; <span class="${ot ? "ot" : ""}">OT ${ot.toFixed(1)}</span></div>
+          </div>
+          ${ot ? '<span class="warn" title="Overtime"></span>' : ""}
+        </div>
+        <div class="lane" data-emp="${emp.id}">${shifts.map(shiftHTML).join("")}</div>
+      </div>`;
+  }).join("");
+}
+
+function shiftHTML(sh) {
+  const role = ROLE[sh.role];
+  return `<div class="shift" data-id="${sh.id}" style="left:${sh.s / 24 * 100}%;width:${(sh.e - sh.s) / 24 * 100}%;background:${role.color}">
+      <span class="grip l"></span>
+      <span class="time">${fmtTime(sh.s)}-${fmtTime(sh.e)}</span>${role.tag ? `<span class="tag">${role.tag}</span>` : ""}
+      <button class="del" title="Remove shift" aria-label="Remove shift">×</button>
+      <span class="grip r"></span>
+    </div>`;
+}
+
+function renderTotals() {
+  const c = compute();
+  const T = c.T;
+  const txt = $("sumTxt");
+  txt.textContent = `Hrs ${T.total.toFixed(2)} | ${T.labour.toFixed(2)}%`;
+  txt.classList.toggle("ok", T.labour <= 30);
+
+  $("sumHours").innerHTML = HOURS.map(h => `<div data-h="${h}">${fmtCell(c.total[h])}</div>`).join("");
+
+  const money = v => v.toFixed(2);
+  const rows = [
+    ["Total Sch. Staff", T.total.toFixed(2), c.total, fmtCell],
+    ["Fixed Staff", T.fixed.toFixed(2), c.fixed, fmtCell],
+    ["Variable Staff", T.variable.toFixed(2), c.variable, fmtCell],
+    ["Forecasted Staff", T.forecast.toFixed(2), state.forecast, fmtCell],
+    ["Staff Variance", T.variance.toFixed(2), c.variance, fmtCell, true],
+    ["Mgmt. Coverage", T.mgmt.toFixed(2), c.mgmt, fmtCell],
+    ["SPLH <small>(Sales/Labor Hrs)</small>", T.splh.toFixed(2), c.splh, money],
+    ["TPLH <small>(Transactions/Labor Hrs)</small>", T.tplh.toFixed(2), c.tplh, money],
+    ["Sch Labour %", T.labour.toFixed(2), c.labour, money],
+    ["Forecasted Sales ($)", T.sales.toFixed(2), state.sales, money, false, true],
+    ["Actual Sales ($)", "0", HOURS.map(() => 0), money, false, true],
+    ["Forecasted Transactions", String(T.trans), c.trans, v => String(v), false, true],
+    ["Actual Transactions", "0", HOURS.map(() => 0), v => String(v), false, true]
+  ];
+  $("breakdown").innerHTML = `
+    <div class="row bd-head"><div class="label"></div><div class="hours">${HOURS.map(h => `<div data-h="${h}">${hourLabel(h)}</div>`).join("")}</div></div>
+    ${rows.map(([name, tot, arr, f, signed, sales]) => `
+      <div class="row bd-row ${sales ? "sales" : ""}">
+        <div class="label"><span>${name}</span><em class="${signed && +tot < 0 ? "neg" : ""}">(${tot})</em></div>
+        <div class="hours">${arr.map((v, h) => `<div data-h="${h}" class="${signed && v < 0 ? "neg" : ""}">${f(v)}</div>`).join("")}</div>
+      </div>`).join("")}`;
+  if (popupOpen) renderChart();
+  return c;
+}
+
+function render() {
+  $("dateLabel").textContent = current.toLocaleDateString("en-GB");
+  renderRows();
+  renderTotals();
+}
+
+/* ===================== Graph popup ===================== */
+let popupOpen = false;
+const NS = "http://www.w3.org/2000/svg";
+
+function openPopup() {
+  popupOpen = true;
+  const pad = $("pad");
+  pad.classList.add("charting");
+  $("graphBtn").classList.add("on");
+  $("graphBtn").setAttribute("aria-expanded", "true");
+  $("scrim").classList.add("on");
+  $("ppDate").textContent = current.toLocaleDateString("en-US", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
+  positionPopup();
+  renderChart(true);
+  $("popup").classList.add("on");
+  $("popup").scrollIntoView({ block: "nearest", behavior: "smooth" });
+  $("ppClose").focus({ preventScroll: true });
+}
+
+function closePopup() {
+  if (!popupOpen) return;
+  popupOpen = false;
+  $("pad").classList.remove("charting");
+  $("graphBtn").classList.remove("on");
+  $("graphBtn").setAttribute("aria-expanded", "false");
+  $("scrim").classList.remove("on");
+  $("popup").classList.remove("on");
+  $("tip").style.display = "none";
+  clearHighlight();
+  $("graphBtn").focus({ preventScroll: true });
+}
+
+function positionPopup() {
+  const popup = $("popup"), summary = $("summary"), btn = $("graphBtn");
+  popup.style.top = (summary.offsetTop - popup.offsetHeight - 12) + "px";
+  const padRect = $("pad").getBoundingClientRect(), b = btn.getBoundingClientRect();
+  popup.style.setProperty("--notch", (b.left - padRect.left + b.width / 2 - 8) + "px");
+}
+
+function renderChart(animate = false) {
+  const c = compute();
+  const svg = $("chart"), body = $("ppBody");
+  const bodyRect = body.getBoundingClientRect();
+  const cells = $("sumHours").children;
+  const x0 = cells[0].getBoundingClientRect().left - bodyRect.left;
+  const x1 = cells[23].getBoundingClientRect().right - bodyRect.left;
+  const colW = (x1 - x0) / 24;
+  const top = 18, bottom = bodyRect.height - 26, ph = bottom - top;
+
+  const peak = Math.max(...c.total, ...state.forecast, 1);
+  const yMax = Math.max(4, Math.ceil(peak / 2) * 2);
+  const y = v => bottom - v / yMax * ph;
+
+  svg.setAttribute("viewBox", `0 0 ${bodyRect.width} ${bodyRect.height}`);
+  svg.innerHTML = "";
+  const el = (tag, attrs, parent = svg) => { const n = document.createElementNS(NS, tag); for (const k in attrs) n.setAttribute(k, attrs[k]); parent.appendChild(n); return n; };
+
+  // y-axis + grid
+  const axis = el("g", { class: "axis" });
+  for (let v = 0; v <= yMax; v += 2) {
+    el("line", { class: "gridline", x1: x0, x2: x1, y1: y(v), y2: y(v) }, axis);
+    const t = el("text", { x: x0 - 8, y: y(v) + 4, "text-anchor": "end" }, axis); t.textContent = v;
+  }
+  const yl = el("text", { x: 0, y: 0, transform: `translate(${x0 - 34},${top + ph / 2}) rotate(-90)`, "text-anchor": "middle" }, axis);
+  yl.textContent = "Hours";
+  el("line", { class: "baseline", x1: x0, x2: x1, y1: bottom, y2: bottom });
+  HOURS.forEach(h => {
+    const t = el("text", { x: x0 + colW * h + colW / 2, y: bottom + 16, "text-anchor": "middle" }, axis);
+    t.textContent = hourLabel(h);
+  });
+
+  // bars: forecast wide behind, scheduled narrow in front with a surface ring
+  const fw = Math.min(colW * 0.72, 44), sw = Math.min(colW * 0.42, 24);
+  HOURS.forEach(h => {
+    const cx = x0 + colW * h + colW / 2;
+    const f = state.forecast[h], s = c.total[h];
+    el("rect", { class: "col-hit", "data-h": h, x: x0 + colW * h, y: top - 8, width: colW, height: ph + 8 });
+    if (f) barPath(el, cx - fw / 2, fw, y(f), bottom, "var(--forecast)", animate, h);
+    if (s) barPath(el, cx - sw / 2, sw, y(s), bottom, "var(--scheduled)", animate, h, true);
+  });
+
+  // left-column stats
+  const T = c.T, diff = T.total - T.forecast;
+  $("stats").style.width = Math.max(150, x0 - 70) + "px";
+  $("stats").innerHTML = `
+    <div class="stat"><small>Scheduled</small><b><i style="background:var(--scheduled)"></i>${T.total.toFixed(2)} hrs</b></div>
+    <div class="stat"><small>Forecasted</small><b><i style="background:var(--forecast)"></i>${T.forecast.toFixed(2)} hrs</b></div>
+    <div class="stat"><small>Variance</small><b class="${diff > 0 ? "neg" : "pos"}">${diff > 0 ? "+" : ""}${diff.toFixed(2)} hrs</b></div>
+    <div class="stat"><small>Sch Labour %</small><b>${T.labour.toFixed(2)}%</b></div>`;
+}
+
+function barPath(el, x, w, yTop, bottom, fill, animate, h, ring) {
+  const r = Math.min(4, w / 2, (bottom - yTop));
+  const d = `M${x},${bottom} V${yTop + r} Q${x},${yTop} ${x + r},${yTop} H${x + w - r} Q${x + w},${yTop} ${x + w},${yTop + r} V${bottom} Z`;
+  const p = el("path", { d, fill, "data-h": h, "pointer-events": "none" });
+  if (ring) { p.setAttribute("stroke", "#fff"); p.setAttribute("stroke-width", "2"); p.setAttribute("paint-order", "stroke"); }
+  if (animate) {
+    p.style.transformOrigin = `0 ${bottom}px`;
+    p.animate([{ transform: "scaleY(0)" }, { transform: "scaleY(1)" }], { duration: 380, easing: "cubic-bezier(.2,.8,.2,1)", delay: h * 12, fill: "backwards" });
+  }
+}
+
+// hover: tooltip + highlight the matching hourly-breakdown column
+function clearHighlight() { document.querySelectorAll(".hl").forEach(n => n.classList.remove("hl")); }
+$("chart").addEventListener("pointermove", e => {
+  const hit = e.target.closest(".col-hit");
+  if (!hit) { $("tip").style.display = "none"; clearHighlight(); return; }
+  showHourTip(+hit.dataset.h, e.clientX, e.clientY);
+});
+
+function showHourTip(h, clientX, clientY) {
+  const tip = $("tip"), c = compute();
+  const s = c.total[h], f = state.forecast[h], d = s - f;
+  clearHighlight();
+  document.querySelector(`#chart .col-hit[data-h="${h}"]`)?.classList.add("hl");
+  tip.innerHTML = `<h4>${fmtTime(h)} – ${fmtTime(h + 1)}</h4>
+    <div><span><i style="background:var(--scheduled)"></i>Scheduled</span><b>${fmtCell(s)} hrs</b></div>
+    <div><span><i style="background:var(--forecast)"></i>Forecasted</span><b>${fmtCell(f)} hrs</b></div>
+    <div class="var"><span>Variance</span><b style="color:${d > 0 ? "var(--red)" : d < 0 ? "#b45309" : "inherit"}">${d > 0 ? "+" : ""}${fmtCell(d)}</b></div>`;
+  tip.style.display = "block";
+  const tw = tip.offsetWidth;
+  let left = clientX + 14;
+  if (left + tw > innerWidth - 8) left = clientX - tw - 14;
+  tip.style.left = left + scrollX + "px";
+  tip.style.top = clientY - tip.offsetHeight - 10 + scrollY + "px";
+}
+$("chart").addEventListener("pointerleave", () => { $("tip").style.display = "none"; clearHighlight(); });
+
+$("graphBtn").addEventListener("click", e => { e.stopPropagation(); popupOpen ? closePopup() : openPopup(); });
+$("ppClose").addEventListener("click", closePopup);
+// Any press outside the popup closes it, and that press does nothing else
+document.addEventListener("pointerdown", e => {
+  if (!popupOpen || $("popup").contains(e.target) || $("graphBtn").contains(e.target)) return;
+  e.preventDefault(); e.stopPropagation();
+  closePopup();
+  swallowClick = true;
+}, true);
+let swallowClick = false;
+document.addEventListener("click", e => { if (swallowClick) { swallowClick = false; e.stopPropagation(); e.preventDefault(); } }, true);
+document.addEventListener("keydown", e => { if (e.key === "Escape") closePopup(); });
+addEventListener("resize", () => { if (popupOpen) { positionPopup(); renderChart(); } });
+
+/* ===================== Breakdown toggle ===================== */
+$("toggleBd").addEventListener("click", () => {
+  const pad = $("pad");
+  pad.classList.toggle("expanded");
+  $("toggleBd").setAttribute("aria-label", pad.classList.contains("expanded") ? "Hide hourly breakdown" : "Show hourly breakdown");
+});
+
+/* ===================== Editing shifts (drives the data) ===================== */
+const snap = v => Math.round(v * 4) / 4;
+let drag = null;
+
+$("rows").addEventListener("pointerdown", e => {
+  if (e.button !== 0) return;
+  const del = e.target.closest(".del");
+  const bar = e.target.closest(".shift");
+  const lane = e.target.closest(".lane");
+  if (del) {
+    const id = +bar.dataset.id;
+    state.shifts = state.shifts.filter(s => s.id !== id);
+    renderRows(); renderTotals(); toast("Shift removed — totals and graph updated");
+    return;
+  }
+  if (bar) {
+    const sh = state.shifts.find(s => s.id === +bar.dataset.id);
+    const mode = e.target.classList.contains("l") ? "l" : e.target.classList.contains("r") ? "r" : "move";
+    drag = { sh, bar, mode, x: e.clientX, s: sh.s, e: sh.e, w: lane.getBoundingClientRect().width };
+    bar.setPointerCapture(e.pointerId);
+    bar.classList.add("dragging");
+    return;
+  }
+  if (lane) {
+    const r = lane.getBoundingClientRect();
+    const s = Math.min(20, Math.floor((e.clientX - r.left) / r.width * 24));
+    const emp = +lane.dataset.emp;
+    const clash = state.shifts.some(x => x.emp === emp && s < x.e && s + 4 > x.s);
+    if (clash) return;
+    state.shifts.push({ id: nextId++, emp, s, e: s + 4, role: "GEN" });
+    renderRows(); renderTotals(); toast("Shift added — totals and graph updated");
+  }
+});
+
+document.addEventListener("pointermove", e => {
+  if (!drag) return;
+  const dh = snap((e.clientX - drag.x) / drag.w * 24);
+  const { sh, mode } = drag;
+  if (mode === "move") {
+    const len = drag.e - drag.s;
+    sh.s = Math.min(Math.max(drag.s + dh, 0), 24 - len); sh.e = sh.s + len;
+  } else if (mode === "l") {
+    sh.s = Math.min(Math.max(drag.s + dh, 0), sh.e - 1);
+  } else {
+    sh.e = Math.max(Math.min(drag.e + dh, 24), sh.s + 1);
+  }
+  drag.bar.style.left = sh.s / 24 * 100 + "%";
+  drag.bar.style.width = (sh.e - sh.s) / 24 * 100 + "%";
+  drag.bar.querySelector(".time").textContent = `${fmtTime(sh.s)}-${fmtTime(sh.e)}`;
+  renderTotals();
+});
+
+document.addEventListener("pointerup", () => {
+  if (!drag) return;
+  const changed = drag.sh.s !== drag.s || drag.sh.e !== drag.e;
+  drag = null;
+  renderRows(); renderTotals();
+  if (changed) toast("Shift updated — open the graph to see the new hours");
+});
+
+/* ===================== Misc ===================== */
+$("prevDay").addEventListener("click", () => { current = new Date(current.getTime() - 864e5); state = dayData(current); render(); });
+$("nextDay").addEventListener("click", () => { current = new Date(current.getTime() + 864e5); state = dayData(current); render(); });
+document.querySelectorAll("[data-soon]").forEach(b => b.addEventListener("click", () => toast("Not part of this prototype")));
+
+let toastT;
+function toast(msg) {
+  const t = $("toast"); t.textContent = msg; t.classList.add("on");
+  clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("on"), 2200);
+}
+
+function syncGutter() {
+  const rows = $("rows");
+  $("pad").style.setProperty("--gutter", (rows.offsetWidth - rows.clientWidth) + "px");
+}
+addEventListener("resize", syncGutter);
+
+render();
+syncGutter();
+if (location.hash === "#graph") openPopup();   // deep link straight to the graph popup
+</script>
+</body>
+</html>
